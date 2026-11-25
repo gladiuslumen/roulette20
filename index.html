@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#070709" />
+  <meta name="description" content="Roulette 20 — free-play 20-number roulette. Chips have no cash value." />
+  <title>Roulette 20</title>
+  <style>
+    :root {
+      --bg: #070709;
+      --felt: #0c2f26;
+      --felt-2: #16483c;
+      --gold: #d4af37;
+      --gold-hi: #f3e0a0;
+      --gold-lo: #8a6d1f;
+      --cream: #f6ebd0;
+      --red: #c41b3a;
+      --red-hi: #e23a58;
+      --black: #161618;
+      --green: #0c8a52;
+      --line: rgba(212, 175, 55, 0.55);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-t: env(safe-area-inset-top, 0px);
+      --serif: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: var(--bg); color: var(--cream);
+      font-family: var(--sans);
+      user-select: none;
+      overflow: hidden;
+    }
+    button {
+      font: inherit; color: inherit; border: 0; background: none;
+      cursor: pointer; touch-action: manipulation;
+    }
+    .app {
+      height: 100dvh;
+      max-width: 430px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(120% 80% at 50% 0%, #1a1408 0%, #070709 55%),
+        var(--bg);
+      border-left: 1px solid rgba(212,175,55,0.12);
+      border-right: 1px solid rgba(212,175,55,0.12);
+    }
+    .top {
+      flex: 0 0 auto;
+      padding: calc(6px + var(--safe-t)) 10px 0;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px;
+    }
+    .title {
+      font-family: var(--serif);
+      font-size: 20px; letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold-hi);
+      text-shadow: 0 0 12px rgba(212,175,55,0.35);
+      margin: 0;
+      line-height: 1;
+    }
+    .title small {
+      display: block; font-size: 9px; letter-spacing: 0.32em;
+      color: var(--gold); opacity: 0.75; margin-top: 3px;
+    }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.35);
+      color: var(--gold-hi);
+      font-size: 16px;
+      display: grid; place-items: center;
+      position: relative;
+    }
+    .icon-btn[aria-pressed="true"]::after {
+      content: "";
+      position: absolute;
+      width: 20px; height: 2px;
+      background: #c41b3a;
+      transform: rotate(-38deg);
+      border-radius: 1px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
+    }
+    .header-actions { display: flex; gap: 6px; }
+    .balance-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 6px; padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(212,175,55,0.12), rgba(0,0,0,0.35));
+    }
+    .bal-label { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+    .bal-val {
+      font-family: var(--serif); font-size: 18px; color: var(--gold-hi);
+      font-variant-numeric: tabular-nums;
+    }
+    .wheel-wrap {
+      position: relative;
+      width: 186px; height: 186px;
+      margin: 4px auto 0;
+    }
+    canvas#wheel { width: 186px; height: 186px; display: block; }
+    .pointer {
+      position: absolute; left: 50%; top: -2px; transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 16px solid var(--gold-hi);
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.7));
+      z-index: 3;
+      pointer-events: none;
+    }
+    .pointer::after {
+      content: "";
+      position: absolute; left: -4px; top: -16px;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 9px solid var(--gold-lo);
+    }
+    .result {
+      text-align: center;
+      min-height: 18px;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      color: var(--gold-hi);
+      margin: 1px 0 2px;
+    }
+    .result.win { color: #9ee7b8; }
+    .result.lose { color: #f0b4b4; }
+    .history {
+      display: flex; justify-content: center; gap: 3px;
+      min-height: 22px; margin-bottom: 2px;
+    }
+    .pip {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 10px; font-weight: 700;
+      border: 1px solid rgba(243,224,160,0.4);
+    }
+    .pip.red { background: var(--red); }
+    .pip.black { background: var(--black); }
+    .pip.green { background: var(--green); }
+    .board-scroll {
+      flex: 1 1 auto;
+      overflow: auto;
+      padding: 4px 10px 6px;
+      background:
+        radial-gradient(80% 60% at 50% 0%, rgba(22,72,60,0.55), rgba(8,24,20,0.9)),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0 2px, transparent 2px 8px);
+      border-top: 1px solid var(--line);
+    }
+    .zero {
+      display: block; width: 100%;
+      height: 32px; margin-bottom: 5px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #14a862, #0a6c40);
+      border: 1px solid var(--gold-hi);
+      font-family: var(--serif); font-size: 18px; font-weight: 700;
+      letter-spacing: 0.12em;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 0 #083;
+      position: relative;
+    }
+    .zero.win-hit { box-shadow: 0 0 0 2px #fff, 0 0 16px var(--gold-hi); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 22px 1fr 22px 1fr 22px 1fr 42px;
+      grid-template-rows: 36px 20px 36px 20px 36px 20px 36px 20px 36px 30px;
+      background: #081a15;
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .num, .rowbet, .colbet, .split, .corner {
+      position: relative;
+      padding: 0;
+    }
+    .num {
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--serif); font-size: 17px; font-weight: 700;
+      border: 1px solid rgba(212,175,55,0.28);
+      color: #fff;
+    }
+    .num.red { background: linear-gradient(180deg, #de2a4a, #9a102c); }
+    .num.black { background: linear-gradient(180deg, #2a2a2e, #101012); }
+    .num.win-hit { outline: 2px solid #fff; outline-offset: -3px; z-index: 2; box-shadow: inset 0 0 16px var(--gold-hi); }
+    .rowbet, .colbet {
+      background: linear-gradient(180deg, #2a2210, #161208);
+      border: 1px solid var(--line);
+      color: var(--gold-hi);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    }
+    .rowbet.win-hit, .colbet.win-hit, .split.win-hit, .corner.win-hit, .out.win-hit, .zero.win-hit {
+      background-image: linear-gradient(180deg, rgba(243,224,160,0.45), rgba(212,175,55,0.2));
+    }
+    .split, .corner {
+      background: #0a241c;
+    }
+    .split.v::before {
+      content: ""; position: absolute; left: 50%; top: 8%; bottom: 8%;
+      width: 2px; transform: translateX(-50%);
+      background: var(--gold);
+      border-radius: 1px;
+    }
+    .split.h::before {
+      content: ""; position: absolute; top: 50%; left: 8%; right: 8%;
+      height: 2px; transform: translateY(-50%);
+      background: var(--gold);
+      border-radius: 1px;
+    }
+    .corner::before {
+      content: ""; position: absolute; left: 50%; top: 50%;
+      width: 9px; height: 9px;
+      transform: translate(-50%,-50%) rotate(45deg);
+      background: var(--gold);
+      border-radius: 1px;
+    }
+    .stack {
+      position: absolute; right: 2px; bottom: 2px;
+      min-width: 18px; height: 18px; padding: 0 4px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #fff, #e6c35c 40%, #9a7318);
+      color: #1a1204; font-size: 9px; font-weight: 800;
+      display: none; align-items: center; justify-content: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      z-index: 3; pointer-events: none;
+    }
+    .stack.on { display: flex; }
+    .split .stack, .corner .stack { right: 50%; bottom: 50%; transform: translate(50%, 50%); }
+    .rowbet .stack, .colbet .stack {
+      right: 50%; bottom: 1px; transform: translateX(50%);
+      min-width: 16px; height: 14px; font-size: 8px; padding: 0 3px;
+    }
+    .rowbet, .colbet { padding-bottom: 12px; font-size: 10px; }
+    .outside {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .out {
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--gold);
+      font-weight: 700; letter-spacing: 0.06em; font-size: 13px;
+      position: relative;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .out.red { background: linear-gradient(180deg, #de2a4a, #9a102c); color: #fff; }
+    .out.black { background: linear-gradient(180deg, #2a2a2e, #101012); color: #fff; }
+    .out.neutral {
+      background: linear-gradient(180deg, #2a2210, #161208);
+      color: var(--gold-hi);
+    }
+    .bottom {
+      flex: 0 0 auto;
+      padding: 6px 10px calc(8px + var(--safe-b));
+      background: linear-gradient(180deg, #120e08, #070709);
+      border-top: 1px solid var(--line);
+    }
+    .chips {
+      display: flex; justify-content: space-between; gap: 8px;
+      margin-bottom: 6px;
+    }
+    .chip {
+      width: 46px; height: 46px; border-radius: 50%;
+      border: 4px dashed rgba(255,255,255,0.55);
+      font-weight: 800; font-size: 14px;
+      box-shadow: 0 3px 0 rgba(0,0,0,0.45), inset 0 2px 3px rgba(255,255,255,0.35);
+      position: relative;
+    }
+    .chip[data-v="1"] { background: radial-gradient(circle at 35% 30%, #fff, #d9d0c0 45%, #8a8174); color: #222; border-color: #fff; }
+    .chip[data-v="5"] { background: radial-gradient(circle at 35% 30%, #ff7a90, #c41b3a 45%, #7a1022); color: #fff; }
+    .chip[data-v="25"] { background: radial-gradient(circle at 35% 30%, #7dffb4, #0c8a52 45%, #064c2c); color: #fff; }
+    .chip[data-v="100"] { background: radial-gradient(circle at 35% 30%, #444, #161618 45%, #000); color: var(--gold-hi); border-color: var(--gold-hi); }
+    .chip.sel {
+      transform: scale(1.08);
+      box-shadow: 0 0 0 2px var(--gold-hi), 0 4px 10px rgba(212,175,55,0.45);
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.6fr;
+      gap: 6px;
+    }
+    .act, .spin, .refill {
+      height: 42px; border-radius: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase; font-size: 12px;
+    }
+    .act {
+      background: #1a160e; border: 1px solid var(--line); color: var(--gold);
+    }
+    .act:disabled, .spin:disabled, .chip:disabled { opacity: 0.35; }
+    .spin {
+      background: linear-gradient(180deg, #f3e0a0, #d4af37 45%, #8a6d1f);
+      color: #1a1204; font-size: 15px; letter-spacing: 0.12em;
+      box-shadow: 0 3px 0 #5a450f, 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .spin:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #5a450f; }
+    .refill {
+      display: none; width: 100%; margin-top: 6px;
+      background: linear-gradient(180deg, #14a862, #0a6c40);
+      border: 1px solid var(--gold); color: #fff;
+    }
+    .refill.show { display: block; }
+    footer {
+      text-align: center; font-size: 9px; line-height: 1.3;
+      color: rgba(246,235,208,0.55);
+      margin-top: 6px;
+    }
+    .overlay {
+      position: fixed; inset: 0; z-index: 20;
+      background: rgba(0,0,0,0.72);
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    .overlay.show { display: flex; }
+    .sheet {
+      width: 100%; max-width: 430px; max-height: 86dvh;
+      overflow: auto;
+      background: #12100c;
+      border-top: 2px solid var(--gold);
+      border-radius: 18px 18px 0 0;
+      padding: 16px 16px calc(20px + var(--safe-b));
+      color: var(--cream);
+    }
+    .sheet h2 {
+      font-family: var(--serif); color: var(--gold-hi);
+      letter-spacing: 0.12em; text-transform: uppercase;
+      margin: 0 0 8px; font-size: 20px;
+    }
+    .sheet p { font-size: 13px; line-height: 1.45; margin: 0 0 10px; color: #e8dcb8; }
+    .sheet table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0 14px; }
+    .sheet th, .sheet td { text-align: left; padding: 6px 4px; border-bottom: 1px solid rgba(212,175,55,0.2); }
+    .sheet th { color: var(--gold); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .close-sheet {
+      width: 100%; height: 46px; border-radius: 10px;
+      background: linear-gradient(180deg, #f3e0a0, #d4af37);
+      color: #1a1204; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .hint { display: none; }
+    @media (min-height: 900px) {
+      .wheel-wrap, canvas#wheel { width: 210px; height: 210px; }
+      .grid { grid-template-rows: 42px 22px 42px 22px 42px 22px 42px 22px 42px 34px; }
+      .zero { height: 36px; }
+      .out { height: 40px; }
+    }
+    @media (max-height: 700px) {
+      .wheel-wrap, canvas#wheel { width: 132px; height: 132px; }
+      .grid { grid-template-rows: 32px 18px 32px 18px 32px 18px 32px 18px 32px 28px; }
+    }
+    @media (max-width: 359px) {
+      .title { font-size: 16px; }
+      .chip { width: 42px; height: 42px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <header>
+        <h1 class="title">Roulette 20 <small>Free play</small></h1>
+        <div class="header-actions">
+          <button class="icon-btn" id="btnSound" aria-label="Toggle sound" aria-pressed="false" title="Sound">♪</button>
+          <button class="icon-btn" id="btnHelp" aria-label="Payouts and help" title="Payouts">?</button>
+        </div>
+      </header>
+      <div class="balance-row">
+        <span class="bal-label">Play chips</span>
+        <span class="bal-val" id="balance">1,000</span>
+      </div>
+      <div class="wheel-wrap">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="472" height="472"></canvas>
+      </div>
+      <div class="result" id="result">Place your bets</div>
+      <div class="history" id="history" aria-label="Last 10 results"></div>
+    </div>
+
+    <div class="board-scroll">
+      <p class="hint">Tap a number, the lines between them, a corner, or an outside bet</p>
+      <button class="zero" id="bet-zero" data-kind="straight" data-nums="0">0</button>
+      <div class="grid" id="grid"></div>
+      <div class="outside">
+        <button class="out red" data-kind="color" data-nums="red">Red</button>
+        <button class="out black" data-kind="color" data-nums="black">Black</button>
+        <button class="out neutral" data-kind="parity" data-nums="odd">Odd</button>
+        <button class="out neutral" data-kind="parity" data-nums="even">Even</button>
+        <button class="out neutral" data-kind="range" data-nums="low">1–10</button>
+        <button class="out neutral" data-kind="range" data-nums="high">11–20</button>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <div class="chips" id="chips"></div>
+      <div class="actions">
+        <button class="act" id="btnUndo">Undo</button>
+        <button class="act" id="btnClear">Clear</button>
+        <button class="act" id="btnRepeat">Repeat</button>
+        <button class="spin" id="btnSpin">Spin</button>
+      </div>
+      <button class="refill" id="btnRefill">Free refill — 1,000 chips</button>
+      <footer>Free play – chips have no cash value. 18+ for entertainment.</footer>
+    </div>
+  </div>
+
+  <div class="overlay" id="help">
+    <div class="sheet" role="dialog" aria-labelledby="helpTitle">
+      <h2 id="helpTitle">Payouts</h2>
+      <p>The wheel has 21 pockets: numbers 1–20 plus a green 0. Every bet has the same house edge of 1/21 (about 4.76%). Chips are for play only and have no cash value.</p>
+      <table>
+        <thead><tr><th>Bet</th><th>Covers</th><th>Pays</th></tr></thead>
+        <tbody>
+          <tr><td>Straight (one number)</td><td>1 number</td><td>19 : 1</td></tr>
+          <tr><td>Zero</td><td>0 only</td><td>19 : 1</td></tr>
+          <tr><td>Split (two adjacent)</td><td>2 numbers</td><td>9 : 1</td></tr>
+          <tr><td>Corner (four)</td><td>4 numbers</td><td>4 : 1</td></tr>
+          <tr><td>Row (R1–R5)</td><td>4 numbers</td><td>4 : 1</td></tr>
+          <tr><td>Column (C1–C4)</td><td>5 numbers</td><td>3 : 1</td></tr>
+          <tr><td>Red or Black</td><td>10 numbers</td><td>1 : 1</td></tr>
+          <tr><td>Odd or Even</td><td>10 numbers</td><td>1 : 1</td></tr>
+          <tr><td>Low 1–10 or High 11–20</td><td>10 numbers</td><td>1 : 1</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Colours.</strong> Red: 1, 3, 6, 8, 9, 11, 14, 16, 17, 19. Black: 2, 4, 5, 7, 10, 12, 13, 15, 18, 20. 0 is green and loses every bet except Zero.</p>
+      <p><strong>How to bet.</strong> Tap a number for a straight bet. Tap the gold line between two numbers for a split, or the diamond where four numbers meet for a corner. R1–R5 and C1–C4 cover that whole row or column. Choose a chip first, then tap. Undo, Clear and Repeat work on the current layout.</p>
+      <button class="close-sheet" id="btnCloseHelp">Close</button>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const STORAGE_KEY = 'roulette20-v1';
+    const START_BALANCE = 1000;
+    const POCKETS = 21;
+    const CHIP_VALUES = [1, 5, 25, 100];
+    const REDS = [1, 3, 6, 8, 9, 11, 14, 16, 17, 19];
+    const BLACKS = [2, 4, 5, 7, 10, 12, 13, 15, 18, 20];
+    const WHEEL = [0, 1, 2, 3, 4, 6, 5, 8, 7, 9, 10, 11, 12, 14, 13, 16, 15, 17, 18, 19, 20];
+    const ROWS = [
+      [1, 2, 3, 4],
+      [5, 6, 7, 8],
+      [9, 10, 11, 12],
+      [13, 14, 15, 16],
+      [17, 18, 19, 20]
+    ];
+    const COLS = [
+      [1, 5, 9, 13, 17],
+      [2, 6, 10, 14, 18],
+      [3, 7, 11, 15, 19],
+      [4, 8, 12, 16, 20]
+    ];
+
+    function payoutOdds(n) { return 20 / n - 1; }
+    function colorOf(n) {
+      if (n === 0) return 'green';
+      return REDS.indexOf(n) !== -1 ? 'red' : 'black';
+    }
+    function covers(kind, token) {
+      if (kind === 'straight') return [Number(token)];
+      if (kind === 'split' || kind === 'corner') return token.split(',').map(Number);
+      if (kind === 'row') return ROWS[Number(token)].slice();
+      if (kind === 'col') return COLS[Number(token)].slice();
+      if (kind === 'color') return (token === 'red' ? REDS : BLACKS).slice();
+      if (kind === 'parity') {
+        const odd = token === 'odd';
+        const out = [];
+        for (let i = 1; i <= 20; i++) if ((i % 2 === 1) === odd) out.push(i);
+        return out;
+      }
+      if (kind === 'range') {
+        const out = [];
+        const lo = token === 'low' ? 1 : 11;
+        const hi = token === 'low' ? 10 : 20;
+        for (let i = lo; i <= hi; i++) out.push(i);
+        return out;
+      }
+      return [];
+    }
+    function betKey(kind, token) { return kind + ':' + token; }
+    function format(n) { return Math.round(n).toLocaleString('en-AU'); }
+
+    const state = {
+      balance: START_BALANCE,
+      bets: {},
+      order: [],
+      lastBets: [],
+      history: [],
+      chip: 5,
+      spinning: false,
+      muted: false,
+      rotation: 0,
+      lastTickIdx: -1
+    };
+
+    let audioCtx = null;
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const face = document.createElement('canvas');
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (typeof data.balance === 'number' && data.balance >= 0) state.balance = Math.floor(data.balance);
+        if (Array.isArray(data.history)) state.history = data.history.slice(0, 10);
+        if (typeof data.muted === 'boolean') state.muted = data.muted;
+        if (CHIP_VALUES.indexOf(data.chip) !== -1) state.chip = data.chip;
+        if (Array.isArray(data.lastBets)) state.lastBets = data.lastBets;
+      } catch (e) { /* ignore */ }
+    }
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          balance: state.balance,
+          history: state.history,
+          muted: state.muted,
+          chip: state.chip,
+          lastBets: state.lastBets
+        }));
+      } catch (e) { /* ignore */ }
+    }
+
+    function buildGrid() {
+      const grid = document.getElementById('grid');
+      const parts = [];
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 4; c++) {
+          const n = r * 4 + c + 1;
+          const col = c * 2 + 1;
+          const row = r * 2 + 1;
+          const color = colorOf(n);
+          parts.push(
+            '<button class="num ' + color + '" style="grid-column:' + col + ';grid-row:' + row +
+            '" data-kind="straight" data-nums="' + n + '" id="cell-' + n + '">' + n +
+            '<span class="stack" data-stack="' + betKey('straight', String(n)) + '"></span></button>'
+          );
+          if (c < 3) {
+            const token = n + ',' + (n + 1);
+            parts.push(
+              '<button class="split v" style="grid-column:' + (col + 1) + ';grid-row:' + row +
+              '" data-kind="split" data-nums="' + token + '" aria-label="Split ' + token +
+              '"><span class="stack" data-stack="' + betKey('split', token) + '"></span></button>'
+            );
+          }
+        }
+        parts.push(
+          '<button class="rowbet" style="grid-column:9;grid-row:' + (r * 2 + 1) +
+          '" data-kind="row" data-nums="' + r + '">R' + (r + 1) +
+          '<span class="stack" data-stack="' + betKey('row', String(r)) + '"></span></button>'
+        );
+        if (r < 4) {
+          for (let c = 0; c < 4; c++) {
+            const n = r * 4 + c + 1;
+            const col = c * 2 + 1;
+            const row = r * 2 + 2;
+            const token = n + ',' + (n + 4);
+            parts.push(
+              '<button class="split h" style="grid-column:' + col + ';grid-row:' + row +
+              '" data-kind="split" data-nums="' + token + '" aria-label="Split ' + token +
+              '"><span class="stack" data-stack="' + betKey('split', token) + '"></span></button>'
+            );
+            if (c < 3) {
+              const corner = [n, n + 1, n + 4, n + 5].join(',');
+              parts.push(
+                '<button class="corner" style="grid-column:' + (col + 1) + ';grid-row:' + row +
+                '" data-kind="corner" data-nums="' + corner + '" aria-label="Corner ' + corner +
+                '"><span class="stack" data-stack="' + betKey('corner', corner) + '"></span></button>'
+              );
+            }
+          }
+        }
+      }
+      for (let c = 0; c < 4; c++) {
+        parts.push(
+          '<button class="colbet" style="grid-column:' + (c * 2 + 1) + ';grid-row:10' +
+          '" data-kind="col" data-nums="' + c + '">C' + (c + 1) +
+          '<span class="stack" data-stack="' + betKey('col', String(c)) + '"></span></button>'
+        );
+      }
+      grid.innerHTML = parts.join('');
+    }
+
+    function buildChips() {
+      const wrap = document.getElementById('chips');
+      wrap.innerHTML = CHIP_VALUES.map(function (v) {
+        return '<button class="chip' + (v === state.chip ? ' sel' : '') + '" data-v="' + v + '">' + v + '</button>';
+      }).join('');
+    }
+
+    function totalOnTable() {
+      let t = 0;
+      Object.keys(state.bets).forEach(function (k) { t += state.bets[k].amount; });
+      return t;
+    }
+
+    function updateStacks() {
+      document.querySelectorAll('[data-stack]').forEach(function (el) {
+        const bet = state.bets[el.getAttribute('data-stack')];
+        if (bet && bet.amount > 0) {
+          el.textContent = bet.amount;
+          el.classList.add('on');
+        } else {
+          el.textContent = '';
+          el.classList.remove('on');
+        }
+      });
+      const z = document.getElementById('bet-zero');
+      let zstack = z.querySelector('.stack');
+      if (!zstack) {
+        zstack = document.createElement('span');
+        zstack.className = 'stack';
+        zstack.setAttribute('data-stack', betKey('straight', '0'));
+        z.appendChild(zstack);
+      }
+      const zb = state.bets[betKey('straight', '0')];
+      if (zb && zb.amount > 0) {
+        zstack.textContent = zb.amount;
+        zstack.classList.add('on');
+      } else {
+        zstack.textContent = '';
+        zstack.classList.remove('on');
+      }
+      document.querySelectorAll('.out').forEach(function (btn) {
+        const key = betKey(btn.getAttribute('data-kind'), btn.getAttribute('data-nums'));
+        let s = btn.querySelector('.stack');
+        if (!s) {
+          s = document.createElement('span');
+          s.className = 'stack';
+          s.setAttribute('data-stack', key);
+          btn.appendChild(s);
+        }
+        const b = state.bets[key];
+        if (b && b.amount > 0) {
+          s.textContent = b.amount;
+          s.classList.add('on');
+        } else {
+          s.textContent = '';
+          s.classList.remove('on');
+        }
+      });
+    }
+
+    function updateChrome() {
+      document.getElementById('balance').textContent = format(state.balance);
+      const broke = state.balance === 0 && totalOnTable() === 0 && !state.spinning;
+      document.getElementById('btnRefill').classList.toggle('show', broke);
+      const canAct = !state.spinning;
+      document.getElementById('btnUndo').disabled = !canAct || state.order.length === 0;
+      document.getElementById('btnClear').disabled = !canAct || totalOnTable() === 0;
+      document.getElementById('btnRepeat').disabled = !canAct || state.lastBets.length === 0 || totalOnTable() > 0;
+      document.getElementById('btnSpin').disabled = !canAct || totalOnTable() === 0;
+      document.getElementById('btnSound').setAttribute('aria-pressed', state.muted ? 'true' : 'false');
+      document.querySelectorAll('.chip').forEach(function (c) {
+        c.classList.toggle('sel', Number(c.getAttribute('data-v')) === state.chip);
+        c.disabled = state.spinning;
+      });
+      renderHistory();
+      updateStacks();
+    }
+
+    function renderHistory() {
+      const el = document.getElementById('history');
+      el.innerHTML = state.history.map(function (n) {
+        return '<span class="pip ' + colorOf(n) + '">' + n + '</span>';
+      }).join('');
+    }
+
+    function placeBet(kind, token, amount) {
+      if (state.spinning) return false;
+      amount = amount || state.chip;
+      if (amount > state.balance) return false;
+      if (amount <= 0) return false;
+      const nums = covers(kind, token);
+      if (!nums.length) return false;
+      const key = betKey(kind, token);
+      if (!state.bets[key]) {
+        state.bets[key] = { kind: kind, token: token, numbers: nums, amount: 0, odds: payoutOdds(nums.length) };
+      }
+      state.bets[key].amount += amount;
+      state.balance -= amount;
+      state.order.push({ key: key, amount: amount });
+      buzz(8);
+      clickSound();
+      updateChrome();
+      save();
+      return true;
+    }
+
+    function undo() {
+      if (state.spinning || !state.order.length) return;
+      const last = state.order.pop();
+      const bet = state.bets[last.key];
+      if (!bet) return;
+      bet.amount -= last.amount;
+      state.balance += last.amount;
+      if (bet.amount <= 0) delete state.bets[last.key];
+      updateChrome();
+      save();
+    }
+
+    function clearBets() {
+      if (state.spinning) return;
+      Object.keys(state.bets).forEach(function (k) { state.balance += state.bets[k].amount; });
+      state.bets = {};
+      state.order = [];
+      clearHighlights();
+      updateChrome();
+      save();
+    }
+
+    function repeatLast() {
+      if (state.spinning || !state.lastBets.length || totalOnTable() > 0) return;
+      const needed = state.lastBets.reduce(function (s, b) { return s + b.amount; }, 0);
+      if (needed > state.balance) {
+        setResult('Need ' + format(needed) + ' chips to repeat', '');
+        return;
+      }
+      state.lastBets.forEach(function (b) { placeBet(b.kind, b.token, b.amount); });
+    }
+
+    function setResult(text, cls) {
+      const el = document.getElementById('result');
+      el.textContent = text;
+      el.className = 'result' + (cls ? ' ' + cls : '');
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.win-hit').forEach(function (el) { el.classList.remove('win-hit'); });
+    }
+
+    function highlightWin(result, winners) {
+      clearHighlights();
+      const cell = document.getElementById(result === 0 ? 'bet-zero' : 'cell-' + result);
+      if (cell) cell.classList.add('win-hit');
+      winners.forEach(function (bet) {
+        const key = betKey(bet.kind, bet.token);
+        document.querySelectorAll('[data-stack="' + key + '"]').forEach(function (s) {
+          if (s.parentElement) s.parentElement.classList.add('win-hit');
+        });
+      });
+    }
+
+    function settle(result, bets) {
+      let returned = 0;
+      const winners = [];
+      Object.keys(bets).forEach(function (k) {
+        const bet = bets[k];
+        if (bet.numbers.indexOf(result) !== -1) {
+          const payout = bet.amount * (bet.odds + 1);
+          returned += payout;
+          winners.push(bet);
+        }
+      });
+      return { returned: returned, winners: winners };
+    }
+
+    function spin() {
+      if (state.spinning || totalOnTable() === 0) return;
+      unlockAudio();
+      state.spinning = true;
+      clearHighlights();
+      const snapshot = Object.keys(state.bets).map(function (k) {
+        const b = state.bets[k];
+        return { kind: b.kind, token: b.token, amount: b.amount, numbers: b.numbers.slice(), odds: b.odds };
+      });
+      state.lastBets = snapshot.map(function (b) {
+        return { kind: b.kind, token: b.token, amount: b.amount };
+      });
+      const result = WHEEL[Math.floor(Math.random() * WHEEL.length)];
+      const idx = WHEEL.indexOf(result);
+      const pocket = 360 / POCKETS;
+      const current = ((state.rotation % 360) + 360) % 360;
+      const targetMod = (360 - idx * pocket) % 360;
+      let delta = (targetMod - current + 360) % 360;
+      const extra = (5 + Math.floor(Math.random() * 2)) * 360;
+      const dest = state.rotation + extra + delta;
+      const start = state.rotation;
+      const duration = 4600;
+      const t0 = performance.now();
+      state.lastTickIdx = -1;
+      setResult('No more bets', '');
+      whoosh();
+      updateChrome();
+
+      function frame(now) {
+        const t = Math.min(1, (now - t0) / duration);
+        const eased = 1 - Math.pow(1 - t, 4);
+        state.rotation = start + (dest - start) * eased;
+        const rot = ((state.rotation % 360) + 360) % 360;
+        const under = Math.round(((360 - rot) % 360) / pocket) % POCKETS;
+        if (under !== state.lastTickIdx) {
+          state.lastTickIdx = under;
+          tickSound(t);
+        }
+        draw(state.rotation, t < 1);
+        if (t < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          state.rotation = dest;
+          finishSpin(result, snapshot);
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function finishSpin(result, snapshot) {
+      const betsMap = {};
+      snapshot.forEach(function (b) { betsMap[betKey(b.kind, b.token)] = b; });
+      const outcome = settle(result, betsMap);
+      state.balance += outcome.returned;
+      const net = outcome.returned - snapshot.reduce(function (s, b) { return s + b.amount; }, 0);
+      state.history.unshift(result);
+      if (state.history.length > 10) state.history.pop();
+      state.bets = {};
+      state.order = [];
+      state.spinning = false;
+      highlightWin(result, outcome.winners);
+      const col = colorOf(result);
+      const label = result + (result === 0 ? ' Green' : (col === 'red' ? ' Red' : ' Black'));
+      if (net > 0) {
+        setResult(label + ' — you win ' + format(outcome.returned) + '  (+' + format(net) + ')', 'win');
+        winSound();
+        buzz(24);
+      } else if (outcome.returned > 0 && net === 0) {
+        setResult(label + ' — even', '');
+      } else if (outcome.returned > 0) {
+        setResult(label + ' — returned ' + format(outcome.returned), 'lose');
+        loseSound();
+      } else {
+        setResult(label + ' — no luck', 'lose');
+        loseSound();
+      }
+      draw(state.rotation, false, result);
+      updateChrome();
+      save();
+    }
+
+    function refill() {
+      if (state.balance > 0 || totalOnTable() > 0 || state.spinning) return;
+      state.balance = START_BALANCE;
+      setResult('Bank topped up with 1,000 play chips', '');
+      updateChrome();
+      save();
+    }
+
+    function drawFace() {
+      const size = 472;
+      face.width = size;
+      face.height = size;
+      const g = face.getContext('2d');
+      const cx = size / 2, cy = size / 2;
+      const outer = size / 2 - 6;
+      const pocketR = outer - 14;
+      const inner = 78;
+      const a = (Math.PI * 2) / POCKETS;
+      const start0 = -Math.PI / 2 - a / 2;
+
+      g.beginPath();
+      g.arc(cx, cy, outer + 2, 0, Math.PI * 2);
+      const rim = g.createRadialGradient(cx, cy, pocketR, cx, cy, outer + 2);
+      rim.addColorStop(0, '#8a6d1f');
+      rim.addColorStop(0.5, '#f3e0a0');
+      rim.addColorStop(1, '#5a450f');
+      g.fillStyle = rim;
+      g.fill();
+
+      for (let i = 0; i < POCKETS; i++) {
+        const n = WHEEL[i];
+        const start = start0 + i * a;
+        g.beginPath();
+        g.moveTo(cx, cy);
+        g.arc(cx, cy, pocketR, start, start + a, false);
+        g.closePath();
+        if (n === 0) g.fillStyle = '#0c8a52';
+        else if (REDS.indexOf(n) !== -1) g.fillStyle = '#c41b3a';
+        else g.fillStyle = '#141416';
+        g.fill();
+        g.strokeStyle = 'rgba(243,224,160,0.65)';
+        g.lineWidth = 2;
+        g.stroke();
+
+        const mid = start + a / 2;
+        const r = (pocketR + inner) / 1.7;
+        g.save();
+        g.translate(cx + Math.cos(mid) * r, cy + Math.sin(mid) * r);
+        g.rotate(mid + Math.PI / 2);
+        g.fillStyle = '#f6ebd0';
+        g.font = '700 22px Palatino, Georgia, serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(String(n), 0, 0);
+        g.restore();
+      }
+
+      g.beginPath();
+      g.arc(cx, cy, inner, 0, Math.PI * 2);
+      const cap = g.createRadialGradient(cx - 10, cy - 12, 8, cx, cy, inner);
+      cap.addColorStop(0, '#f3e0a0');
+      cap.addColorStop(0.45, '#d4af37');
+      cap.addColorStop(1, '#5a450f');
+      g.fillStyle = cap;
+      g.fill();
+      g.lineWidth = 4;
+      g.strokeStyle = '#f6ebd0';
+      g.stroke();
+      g.fillStyle = '#1a1204';
+      g.font = '700 28px Palatino, Georgia, serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('20', cx, cy - 8);
+      g.font = '16px Palatino, Georgia, serif';
+      g.fillStyle = '#3a2a08';
+      g.fillText('ROULETTE', cx, cy + 16);
+    }
+
+    function draw(rotationDeg, spinning, result) {
+      const size = canvas.width;
+      const cx = size / 2, cy = size / 2;
+      ctx.clearRect(0, 0, size, size);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotationDeg * Math.PI / 180);
+      ctx.drawImage(face, -cx, -cy);
+      ctx.restore();
+
+      const pocketR = size / 2 - 20;
+      const ballR = pocketR - 36;
+      const angle = -Math.PI / 2;
+      if (spinning || result !== undefined) {
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(angle) * ballR, cy + Math.sin(angle) * ballR, 9, 0, Math.PI * 2);
+        const grd = ctx.createRadialGradient(cx - 4, cy - ballR - 3, 1, cx, cy - ballR, 9);
+        grd.addColorStop(0, '#fff');
+        grd.addColorStop(1, '#c8c4bc');
+        ctx.fillStyle = grd;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.stroke();
+      }
+    }
+
+    function unlockAudio() {
+      if (state.muted) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      } catch (e) { /* ignore */ }
+    }
+    function tone(freq, dur, type, gain, delay) {
+      if (state.muted || !audioCtx) return;
+      const t = audioCtx.currentTime + (delay || 0);
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime((gain || 0.05), t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+    function clickSound() { unlockAudio(); tone(880, 0.05, 'triangle', 0.04); }
+    function tickSound(progress) {
+      unlockAudio();
+      tone(640 - progress * 200, 0.03, 'square', 0.03 * (1 - progress * 0.4));
+    }
+    function whoosh() { unlockAudio(); tone(180, 0.4, 'sawtooth', 0.03); }
+    function winSound() {
+      unlockAudio();
+      tone(523, 0.12, 'sine', 0.06, 0);
+      tone(659, 0.12, 'sine', 0.06, 0.1);
+      tone(784, 0.28, 'sine', 0.07, 0.2);
+    }
+    function loseSound() { unlockAudio(); tone(140, 0.22, 'sine', 0.05); }
+    function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+
+    document.getElementById('grid').addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-kind]');
+      if (!btn || state.spinning) return;
+      placeBet(btn.getAttribute('data-kind'), btn.getAttribute('data-nums'));
+    });
+    document.getElementById('bet-zero').addEventListener('click', function () {
+      placeBet('straight', '0');
+    });
+    document.querySelector('.outside').addEventListener('click', function (e) {
+      const btn = e.target.closest('button[data-kind]');
+      if (!btn || state.spinning) return;
+      placeBet(btn.getAttribute('data-kind'), btn.getAttribute('data-nums'));
+    });
+    document.getElementById('chips').addEventListener('click', function (e) {
+      const btn = e.target.closest('.chip');
+      if (!btn || state.spinning) return;
+      state.chip = Number(btn.getAttribute('data-v'));
+      updateChrome();
+      save();
+    });
+    document.getElementById('btnUndo').addEventListener('click', undo);
+    document.getElementById('btnClear').addEventListener('click', clearBets);
+    document.getElementById('btnRepeat').addEventListener('click', repeatLast);
+    document.getElementById('btnSpin').addEventListener('click', spin);
+    document.getElementById('btnRefill').addEventListener('click', refill);
+    document.getElementById('btnSound').addEventListener('click', function () {
+      state.muted = !state.muted;
+      if (!state.muted) unlockAudio();
+      updateChrome();
+      save();
+    });
+    document.getElementById('btnHelp').addEventListener('click', function () {
+      document.getElementById('help').classList.add('show');
+    });
+    document.getElementById('btnCloseHelp').addEventListener('click', function () {
+      document.getElementById('help').classList.remove('show');
+    });
+    document.getElementById('help').addEventListener('click', function (e) {
+      if (e.target.id === 'help') e.target.classList.remove('show');
+    });
+
+    window.R20 = {
+      payoutOdds: payoutOdds,
+      colorOf: colorOf,
+      covers: covers,
+      settle: settle,
+      REDS: REDS,
+      BLACKS: BLACKS,
+      WHEEL: WHEEL,
+      ROWS: ROWS,
+      COLS: COLS,
+      POCKETS: POCKETS,
+      START_BALANCE: START_BALANCE
+    };
+
+    load();
+    buildGrid();
+    buildChips();
+    drawFace();
+    draw(state.rotation, false);
+    updateChrome();
+    if (state.history.length) setResult('Last up: ' + state.history[0], '');
+  })();
+  </script>
+</body>
+</html>
